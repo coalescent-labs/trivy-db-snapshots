@@ -1,7 +1,6 @@
 # trivy-db-snapshots
 
-[![Trivy DB snapshot](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml/badge.svg)](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml)
-[![Cleanup old DB snapshots](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/cleanup.yml/badge.svg)](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/cleanup.yml)
+[![Trivy DB snapshot](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml/badge.svg?branch=main)](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml)
 
 Dated, frozen snapshots of the public [Aqua Security Trivy](https://trivy.dev) databases
 (vulnerability DB + Java index DB), published as GitHub Releases so our release bundles can be
