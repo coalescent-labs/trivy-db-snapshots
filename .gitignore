@@ -1,0 +1,9 @@
+# IDE
+.idea/
+*.iml
+
+# Local snapshot build artifacts (from --dry-run) and downloaded DBs
+trivy-db-*.tar.gz
+trivy-java-db-*.tar.gz
+snapshot-manifest-*.json
+.trivy-db-cache/

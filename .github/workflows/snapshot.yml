@@ -1,0 +1,49 @@
+name: Trivy DB snapshot
+
+# Captures a point-in-time snapshot of the public Aqua Security Trivy databases and publishes it
+# as a GitHub Release (tag = YYYY.MM). Runs automatically on the 1st of each month at 06:00 UTC,
+# and can be triggered manually to force "today's DB" into a specific month's tag -- e.g. dispatch
+# it now with tag=2026.07 to seed the July bundle right before release.
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'          # 06:00 UTC on the 1st of every month
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Snapshot tag YYYY.MM (default: current month). Existing release is clobbered.'
+        required: false
+
+permissions:
+  contents: write                # create the release in THIS repo -- no cross-repo secret needed
+
+jobs:
+  snapshot:
+    name: Capture & publish Trivy DB snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.3.1
+
+      - name: Resolve tag and capture timestamp
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          [ -n "$TAG" ] || TAG="$(date -u +%Y.%m)"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "captured_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          echo "Snapshot tag: $TAG"
+
+      - name: Build & publish snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/snapshot-trivy-db.sh \
+            --tag "${{ steps.meta.outputs.tag }}" \
+            --captured-at "${{ steps.meta.outputs.captured_at }}"
