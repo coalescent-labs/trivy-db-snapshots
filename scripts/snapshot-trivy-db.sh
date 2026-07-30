@@ -137,7 +137,11 @@ tar -C "$CACHE_DIR" -czf "$OUT_DIR/trivy-java-db-${TAG}.tar.gz" java-db
 warn_if_big() {
     local f="$1" bytes; bytes=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f")
     local gib=$(( 2 * 1024 * 1024 * 1024 ))
-    (( bytes > gib )) && echo -e "${YELLOW}⚠ $(basename "$f") is $((bytes/1024/1024)) MiB — near/over the 2 GiB asset cap${NC}"
+    # NB: use `if`, not `(( ... )) && echo`. Under `set -e` a false `(( ))` returns 1, which would
+    # become this function's exit status and abort the whole script at the call site.
+    if (( bytes > gib )); then
+        echo -e "${YELLOW}⚠ $(basename "$f") is $((bytes/1024/1024)) MiB — near/over the 2 GiB asset cap${NC}"
+    fi
 }
 for f in "$OUT_DIR"/*.tar.gz; do warn_if_big "$f"; done
 
