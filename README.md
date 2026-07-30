@@ -1,5 +1,8 @@
 # trivy-db-snapshots
 
+[![Trivy DB snapshot](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml/badge.svg)](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/snapshot.yml)
+[![Cleanup old DB snapshots](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/cleanup.yml/badge.svg)](https://github.com/coalescent-labs/trivy-db-snapshots/actions/workflows/cleanup.yml)
+
 Dated, frozen snapshots of the public [Aqua Security Trivy](https://trivy.dev) databases
 (vulnerability DB + Java index DB), published as GitHub Releases so our release bundles can be
 scanned against a **fixed, declared point-in-time CVE set**.
@@ -35,25 +38,26 @@ Release assets do not count toward repo size and are not billed, so retention is
   to force *today's* DB into a specific month — used to seed the current bundle just before release.
 - **`.github/workflows/cleanup.yml`** — monthly; deletes snapshots older than 5 years.
 
-Both use the repo's default `GITHUB_TOKEN` (`contents: write`). No org secrets are required.
+## Using a snapshot with Trivy
 
-## How it is consumed
-
-The fleet's `scripts/run-trivy.sh` selects the DB with `--db`:
+The assets are a Trivy cache directory split in two. Download a snapshot (public, no auth) and point
+Trivy at it, disabling updates so the CVE set stays frozen:
 
 ```bash
-./scripts/run-trivy.sh --db latest        # current online DB, auto-updated   (nightly)
-./scripts/run-trivy.sh --db bundle         # freeze to this bundle's DB, derived from version-bundle.txt (release)
-./scripts/run-trivy.sh --db 2026.07        # freeze to a specific snapshot     (patches / reproduce a past scan)
+tag=2026.07
+base="https://github.com/coalescent-labs/trivy-db-snapshots/releases/download/$tag"
+mkdir -p trivy-cache
+curl -fsSL "$base/trivy-db-$tag.tar.gz"      | tar -xz -C trivy-cache   # -> trivy-cache/db
+curl -fsSL "$base/trivy-java-db-$tag.tar.gz" | tar -xz -C trivy-cache   # -> trivy-cache/java-db
+
+trivy image --cache-dir "$PWD/trivy-cache" \
+  --skip-db-update --skip-java-db-update \
+  <your-image>
 ```
 
-`--db bundle` reads `version-bundle.txt` (e.g. `6.0.2607`) and derives the snapshot tag from the
-last four digits (`2607` → `2026.07`). Frozen scans run with `--skip-db-update --skip-java-db-update`
-so the CVE set never drifts.
-
-> **Schema note:** the DB `schema` (currently v2) is tied to the Trivy version. A frozen snapshot
-> must be scanned with a Trivy that supports its schema — the manifest records `trivyVersion`, and
-> `run-trivy.sh`'s Docker fallback pins that version automatically in frozen mode.
+> **Schema note:** the DB `schema` (see `dbSchema` in the manifest, currently v2) is tied to the Trivy
+> version. Scan a frozen snapshot with a Trivy that supports its schema — `snapshot-manifest-<tag>.json`
+> records the `trivyVersion` the snapshot was produced with.
 
 ## Producing a snapshot locally
 
