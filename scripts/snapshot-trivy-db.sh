@@ -179,8 +179,10 @@ EOF
 
 echo -e "${GREEN}▶ Creating GitHub Release ${TAG}...${NC}"
 if gh release view "$TAG" "${REPO_ARG[@]}" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠ Release ${TAG} already exists — uploading/clobbering assets${NC}"
+    echo -e "${YELLOW}⚠ Release ${TAG} already exists — refreshing assets and notes${NC}"
     gh release upload "$TAG" "${REPO_ARG[@]}" --clobber "$OUT_DIR"/*
+    # Keep the notes in sync with the just-clobbered assets/manifest (upload does not touch notes).
+    gh release edit "$TAG" "${REPO_ARG[@]}" --title "Trivy DB snapshot ${TAG}" --notes "$NOTES"
 else
     gh release create "$TAG" "${REPO_ARG[@]}" \
         --title "Trivy DB snapshot ${TAG}" \
