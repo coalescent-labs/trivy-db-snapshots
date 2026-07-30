@@ -172,8 +172,6 @@ Frozen snapshot of the public Aqua Security Trivy databases.
 - DB schema: v${DB_SCHEMA} · Java DB schema: v${JAVADB_SCHEMA}
 - Produced with Trivy \`${TRIVY_VERSION}\` (frozen scans must run with a Trivy that supports schema v${DB_SCHEMA})
 - Captured at: \`${CAPTURED_AT}\`
-
-Consumed by \`run-trivy.sh --db ${TAG}\` (or \`--db bundle\`, which derives this tag from \`version-bundle.txt\`).
 EOF
 )
 
