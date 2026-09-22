@@ -175,12 +175,30 @@ Frozen snapshot of the public Aqua Security Trivy databases.
 EOF
 )
 
+# Retry a command on failure: the GitHub API occasionally returns transient 5xx on asset
+# delete/upload. Every step below is idempotent (--clobber re-uploads, edit overwrites), so
+# re-running is safe -- and necessary, since --clobber deletes the old asset BEFORE uploading
+# the new one: a failure in between leaves the release without that asset.
+retry() {
+    local attempt=1 max=5
+    until "$@"; do
+        if (( attempt >= max )); then
+            echo -e "${RED}✗ Failed after ${max} attempts: $*${NC}"; return 1
+        fi
+        echo -e "${YELLOW}⚠ Attempt ${attempt}/${max} failed — retrying in $((attempt * 15))s${NC}"
+        sleep $((attempt * 15)); attempt=$((attempt + 1))
+    done
+}
+
 echo -e "${GREEN}▶ Creating GitHub Release ${TAG}...${NC}"
 if gh release view "$TAG" "${REPO_ARG[@]}" >/dev/null 2>&1; then
     echo -e "${YELLOW}⚠ Release ${TAG} already exists — refreshing assets and notes${NC}"
-    gh release upload "$TAG" "${REPO_ARG[@]}" --clobber "$OUT_DIR"/*
+    # One asset per call, so a retry only redoes the asset that failed.
+    for f in "$OUT_DIR"/*; do
+        retry gh release upload "$TAG" "${REPO_ARG[@]}" --clobber "$f"
+    done
     # Keep the notes in sync with the just-clobbered assets/manifest (upload does not touch notes).
-    gh release edit "$TAG" "${REPO_ARG[@]}" --title "Trivy DB snapshot ${TAG}" --notes "$NOTES"
+    retry gh release edit "$TAG" "${REPO_ARG[@]}" --title "Trivy DB snapshot ${TAG}" --notes "$NOTES"
 else
     gh release create "$TAG" "${REPO_ARG[@]}" \
         --title "Trivy DB snapshot ${TAG}" \
